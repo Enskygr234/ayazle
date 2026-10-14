@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ayazle — Türkçe kelime oyunu</title>
+<meta name="description" content="Her gün yeni bir kelime. 6 hakta bul, anlamını öğren, sonucunu paylaş.">
+<meta name="theme-color" content="#0b1626">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="kar" aria-hidden="true"></canvas>
+
+<div class="uygulama">
+  <header>
+    <button class="simge" id="yardimDugme" aria-label="Nasıl oynanır">?</button>
+    <h1>AYAZ<span>LE</span></h1>
+    <button class="simge" id="istatistikDugme" aria-label="İstatistikler">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M4 20V10h3v10H4zm6.5 0V4h3v16h-3zM17 20v-7h3v7h-3z"/></svg>
+    </button>
+  </header>
+
+  <nav class="secimler">
+    <div class="sekmeler" role="tablist" aria-label="Oyun modu">
+      <button role="tab" data-mod="gunluk" aria-selected="true">Günün kelimesi</button>
+      <button role="tab" data-mod="sureli" aria-selected="false">Süreli</button>
+    </div>
+    <div class="uzunluklar" role="radiogroup" aria-label="Harf sayısı">
+      <button role="radio" data-uzunluk="4" aria-checked="false">4</button>
+      <button role="radio" data-uzunluk="5" aria-checked="true">5</button>
+      <button role="radio" data-uzunluk="6" aria-checked="false">6</button>
+    </div>
+  </nav>
+
+  <div class="sureli-bilgi" id="sureliBilgi" hidden>
+    <div class="sure-cubuk"><i id="sureCubuk"></i></div>
+    <div class="sureli-satir"><span id="kalanSure">2:00</span><span>Bulunan: <b id="sureliPuan">0</b></span></div>
+  </div>
+
+  <main id="tahta" aria-label="Tahmin tahtası"></main>
+
+  <div class="klavye" id="klavye" aria-label="Klavye"></div>
+</div>
+
+<div class="bildirim" id="bildirim" role="status" aria-live="polite"></div>
+
+<!-- Pencereler -->
+<div class="perde" id="perde" hidden>
+  <section class="pencere" id="pencere" role="dialog" aria-modal="true">
+    <button class="kapat" id="kapat" aria-label="Kapat">×</button>
+    <div id="pencereIcerik"></div>
+  </section>
+</div>
+
+<script src="kelimeler.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
