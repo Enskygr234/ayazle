@@ -8,6 +8,18 @@
 
 </div>
 
+<!-- ENS:TANITIM -->
+## 🎬 Tanıtım
+
+<div align="center">
+
+<a href="docs/tanitim.mp4"><img src="docs/tanitim.gif" width="720" alt="Ayazle tanıtım videosu"></a>
+
+<sub>Tam kalitede izlemek için görsele tıkla · MP4, 35 saniye</sub>
+
+</div>
+<!-- /ENS:TANITIM -->
+
 **Ayazle**, buzlu bir kış havasında oynanan Türkçe kelime oyunu. Gizli kelimeyi 6 hakta bul; bulunca kar patlar, ardından kelimenin anlamı ve örnek bir cümle çıkar. Yani oynarken kelime de öğrenirsin.
 
 ## Nasıl oynanır
@@ -64,3 +76,19 @@ Oyunun adı, buzlu kış teması, modlar ve kelime bulununca önce kar patlamas�
 ## Lisans
 
 [MIT](LICENSE) © Winterdeveloper
+
+<!-- ENS:ALT -->
+---
+
+<div align="center">
+
+**❄️ ENS Developer'ın diğer projeleri**
+
+🎮 Oyunlar: [Mahalle](https://github.com/Enskygr234/mahalle) · [Ayaz Ata'nın Feneri](https://github.com/Enskygr234/ensdewloper.github.io/tree/main/ayaz-feneri) · [Kayıp Fener](https://github.com/Enskygr234/kayip-fener) · [Son Kış](https://github.com/Enskygr234/son-kis) · [Buz Kırıcı](https://github.com/Enskygr234/buz-kirici) · [Kar Birleştir](https://github.com/Enskygr234/kar-birlestir)
+
+[🌐 Bütün projeler](https://enskygr234.github.io/ensdewloper.github.io/) · [👤 GitHub profilim](https://github.com/Enskygr234)
+
+<sub>Kış gelir, kod yazılır.</sub>
+
+</div>
+<!-- /ENS:ALT -->
