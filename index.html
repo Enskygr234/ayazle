@@ -17,9 +17,14 @@
   <header>
     <button class="simge" id="yardimDugme" aria-label="Nasıl oynanır">?</button>
     <h1>AYAZ<span>LE</span></h1>
-    <button class="simge" id="istatistikDugme" aria-label="İstatistikler">
-      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M4 20V10h3v10H4zm6.5 0V4h3v16h-3zM17 20v-7h3v7h-3z"/></svg>
-    </button>
+    <div class="sag-simgeler">
+      <button class="simge" id="istatistikDugme" aria-label="İstatistikler">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M4 20V10h3v10H4zm6.5 0V4h3v16h-3zM17 20v-7h3v7h-3z"/></svg>
+      </button>
+      <button class="simge" id="ayarDugme" aria-label="Ayarlar">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1L15 3h-4l-.4 2.9a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1L11 21h4l.4-2.9a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5L19.4 13zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+      </button>
+    </div>
   </header>
 
   <nav class="secimler">
@@ -36,7 +41,7 @@
 
   <div class="sureli-bilgi" id="sureliBilgi" hidden>
     <div class="sure-cubuk"><i id="sureCubuk"></i></div>
-    <div class="sureli-satir"><span id="kalanSure">2:00</span><span>Bulunan: <b id="sureliPuan">0</b></span></div>
+    <div class="sureli-satir"><span id="kalanSure">2:00</span><button class="pas" id="pasDugme" title="Bu kelimeyi geç (10 saniye ceza)">Pas · −10 sn</button><span>Bulunan: <b id="sureliPuan">0</b></span></div>
   </div>
 
   <main id="tahta" aria-label="Tahmin tahtası"></main>
@@ -54,6 +59,7 @@
   </section>
 </div>
 
+<script src="sozluk.js"></script>
 <script src="kelimeler.js"></script>
 <script src="app.js"></script>
 </body>

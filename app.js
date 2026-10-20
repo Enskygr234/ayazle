@@ -70,14 +70,42 @@ function puanla(tahmin, cevap) {
 }
 
 // ---------- durum ----------
-const ayar = oku("ayar", { uzunluk: 5, mod: "gunluk", yardimGoruldu: false });
+const ayar = Object.assign({ uzunluk: 5, mod: "gunluk", yardimGoruldu: false, zor: false, kontrast: false, ses: true }, oku("ayar", {}));
 let mod = ayar.mod === "sureli" ? "sureli" : "gunluk";
 let uzunluk = [4, 5, 6].includes(ayar.uzunluk) ? ayar.uzunluk : 5;
 let oyun;            // { cevap, tahminler, yazilan, bitti, kazandi }
 let kilit = false;   // açılma animasyonu sürerken girişi durdur
 let sureli = null;   // { bitis, puan, bulunanlar, kacanlar, kullanilan, zamanlayici }
 
-function ayarKaydet() { yaz("ayar", { uzunluk, mod, yardimGoruldu: ayar.yardimGoruldu }); }
+function ayarKaydet() {
+  yaz("ayar", { uzunluk, mod, yardimGoruldu: ayar.yardimGoruldu, zor: ayar.zor, kontrast: ayar.kontrast, ses: ayar.ses });
+}
+
+// ---------- ses ----------
+// Dosya yok: kısa tonlar Web Audio ile anında üretilir.
+let sesBaglam = null;
+function ton(frekans, baslangic = 0, sure = 0.08, tur = "sine", guc = 0.06) {
+  if (!ayar.ses) return;
+  try {
+    sesBaglam = sesBaglam || new (window.AudioContext || window.webkitAudioContext)();
+    if (sesBaglam.state === "suspended") sesBaglam.resume();
+    const t = sesBaglam.currentTime + baslangic;
+    const o = sesBaglam.createOscillator(), g = sesBaglam.createGain();
+    o.type = tur; o.frequency.value = frekans;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(guc, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + sure);
+    o.connect(g).connect(sesBaglam.destination);
+    o.start(t); o.stop(t + sure + 0.02);
+  } catch { /* ses desteklenmiyor */ }
+}
+const SES = {
+  tus: () => ton(660, 0, 0.04, "triangle", 0.03),
+  cevir: sonuc => sonuc.forEach((d, i) => ton({ dogru: 880, var: 620, yok: 330 }[d], i * 0.25 + 0.25, 0.09, "triangle", 0.05)),
+  hata: () => { ton(180, 0, 0.12, "square", 0.03); ton(150, 0.1, 0.14, "square", 0.03); },
+  kazan: () => [523, 659, 784, 1047].forEach((f, i) => ton(f, i * 0.09, 0.22, "sine", 0.07)),
+  kayip: () => [392, 330, 262].forEach((f, i) => ton(f, i * 0.16, 0.3, "sine", 0.06)),
+};
 
 function istatistikOku(n) {
   return oku("istatistik-" + n, { oynanan: 0, kazanilan: 0, seri: 0, enSeri: 0, dagilim: [0, 0, 0, 0, 0, 0], sonGun: 0 });
@@ -155,6 +183,7 @@ function tumunuCiz() {
   oyun.tahminler.forEach((t, s) => satirCiz(s, Array.from(t), puanla(t, oyun.cevap.kelime), false));
   if (!oyun.bitti && oyun.tahminler.length < DENEME) satirCiz(oyun.tahminler.length, oyun.yazilan, null);
   klavyeBoya();
+  zorRozetiCiz();
 }
 
 let bildirimZamanlayici;
@@ -172,20 +201,21 @@ function gunlukBaslat() {
   const kayit = oku("gunluk-" + uzunluk, null);
   const cevap = gununKelimesi(uzunluk, gun);
   oyun = kayit && kayit.gun === gun
-    ? { cevap, tahminler: kayit.tahminler, yazilan: [], bitti: kayit.bitti, kazandi: kayit.kazandi, gun }
-    : { cevap, tahminler: [], yazilan: [], bitti: false, kazandi: false, gun };
+    ? { cevap, tahminler: kayit.tahminler, yazilan: [], bitti: kayit.bitti, kazandi: kayit.kazandi, gun, zor: !!kayit.zor }
+    : { cevap, tahminler: [], yazilan: [], bitti: false, kazandi: false, gun, zor: ayar.zor };
   tumunuCiz();
   if (oyun.bitti) setTimeout(() => sonucGoster(false), 300);
 }
 
 function gunlukKaydet() {
-  yaz("gunluk-" + uzunluk, { gun: oyun.gun, tahminler: oyun.tahminler, bitti: oyun.bitti, kazandi: oyun.kazandi });
+  yaz("gunluk-" + uzunluk, { gun: oyun.gun, tahminler: oyun.tahminler, bitti: oyun.bitti, kazandi: oyun.kazandi, zor: oyun.zor });
 }
 
 function harfEkle(h) {
   if (mod === "sureli" && !sureli) { sureliBaslangicPenceresi(); return; }
   if (kilit || oyun.bitti || oyun.yazilan.length >= uzunluk) return;
   oyun.yazilan.push(h);
+  SES.tus();
   satirCiz(oyun.tahminler.length, oyun.yazilan, null);
 }
 
@@ -202,12 +232,15 @@ function gonder() {
   if (oyun.yazilan.length < uzunluk) { salla(satir); bildir("Harf eksik"); return; }
   const tahmin = oyun.yazilan.join("");
   if (!GECERLI[uzunluk].has(tahmin)) { salla(satir); bildir("Bu kelime listede yok"); return; }
+  const zorHata = oyun.zor ? zorKontrol(tahmin) : null;
+  if (zorHata) { salla(satir); bildir(zorHata, 2000); return; }
 
   const sonuc = puanla(tahmin, oyun.cevap.kelime);
   const s = oyun.tahminler.length;
   oyun.tahminler.push(tahmin);
   oyun.yazilan = [];
   satirCiz(s, Array.from(tahmin), sonuc, true);
+  SES.cevir(sonuc);
 
   const kazandi = tahmin === oyun.cevap.kelime;
   const bitti = kazandi || oyun.tahminler.length === DENEME;
@@ -225,14 +258,32 @@ function gonder() {
     if (!bitti) return;
     if (mod === "gunluk") {
       if (kazandi) { kutla(s); setTimeout(() => sonucGoster(true), 1300); }
-      else setTimeout(() => sonucGoster(true), 400);
+      else { SES.kayip(); setTimeout(() => sonucGoster(true), 400); }
     } else {
       sureliKelimeBitti(kazandi, s);
     }
   }, acilis);
 }
 
+// Zor mod: bulunan ipuçları sonraki tahminlerde kullanılmak zorunda
+function zorKontrol(tahmin) {
+  const t = Array.from(tahmin);
+  for (const onceki of oyun.tahminler) {
+    const o = Array.from(onceki), sonuc = puanla(onceki, oyun.cevap.kelime);
+    for (let i = 0; i < o.length; i++) {
+      if (sonuc[i] === "dogru" && t[i] !== o[i]) return `${i + 1}. harf ${buyuk(o[i])} olmalı`;
+    }
+    const gerekli = {};
+    o.forEach((h, i) => { if (sonuc[i] !== "yok") gerekli[h] = (gerekli[h] || 0) + 1; });
+    for (const h in gerekli) {
+      if (t.filter(x => x === h).length < gerekli[h]) return `Tahminde ${buyuk(h)} olmalı`;
+    }
+  }
+  return null;
+}
+
 function salla(satir) {
+  SES.hata();
   satir.classList.remove("salla");
   void satir.offsetWidth;
   satir.classList.add("salla");
@@ -246,6 +297,7 @@ function kutla(s) {
   }
   const kutu = $("tahta").children[s].getBoundingClientRect();
   karPatlat(kutu.left + kutu.width / 2, kutu.top + kutu.height / 2);
+  SES.kazan();
   if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
 }
 
@@ -269,7 +321,7 @@ function istatistikIsle(kazandi, deneme) {
 // ---------- süreli mod ----------
 function sureliHazirla() {
   sureliDurdur();
-  oyun = { cevap: { kelime: "" }, tahminler: [], yazilan: [], bitti: false, kazandi: false };
+  oyun = { cevap: { kelime: "" }, tahminler: [], yazilan: [], bitti: false, kazandi: false, zor: ayar.zor };
   tahtaKur();
   klavyeBoya();
   $("sureCubuk").style.width = "100%";
@@ -283,7 +335,7 @@ function sureliBaslangicPenceresi() {
   const rekor = oku("sureli-rekor-" + uzunluk, 0);
   pencereAc(`
     <h2>Süreli mod · ${uzunluk} harf</h2>
-    <p>2 dakikada bulabildiğin kadar kelime bul. Her kelime için yine 6 hakkın var; bulamazsan sıradakine geçilir.</p>
+    <p>2 dakikada bulabildiğin kadar kelime bul. Her kelime için yine 6 hakkın var; bulamazsan sıradakine geçilir. Takılırsan <b>Pas</b> de, ama 10 saniye kaybedersin.</p>
     <p class="kucuk-yazi">Rekorun: <b>${rekor}</b> kelime</p>
     <button class="buyuk-dugme" id="sureliBasla">Başla</button>
   `);
@@ -302,8 +354,26 @@ function sureliYeniKelime() {
   const kaynak = havuz.length ? havuz : CEVAPLAR[uzunluk];
   const cevap = kaynak[Math.floor(Math.random() * kaynak.length)];
   sureli.kullanilan.add(cevap.kelime);
-  oyun = { cevap, tahminler: [], yazilan: [], bitti: false, kazandi: false };
+  oyun = { cevap, tahminler: [], yazilan: [], bitti: false, kazandi: false, zor: ayar.zor };
   tumunuCiz();
+}
+
+// Pas: kelimeyi geç, 10 saniye kaybet
+const PAS_CEZA = 10;
+function pasGec() {
+  if (mod !== "sureli") return;
+  if (!sureli) { sureliBaslangicPenceresi(); return; }
+  if (kilit || oyun.bitti) return;
+  oyun.bitti = true;
+  sureli.kacanlar.push(oyun.cevap);
+  sureli.bitis -= PAS_CEZA * 1000;
+  const cubuk = $("sureCubuk").parentElement;
+  cubuk.classList.add("ceza");
+  setTimeout(() => cubuk.classList.remove("ceza"), 500);
+  SES.hata();
+  bildir("Pas: " + buyuk(oyun.cevap.kelime) + " · −" + PAS_CEZA + " sn", 1300);
+  sureliSaat();
+  if (sureli) sureliYeniKelime();
 }
 
 function sureliSaat() {
@@ -390,9 +460,53 @@ function yardimGoster() {
     ${ornek("boran", 3, "yok")}
     <p class="kucuk-yazi"><b>A</b> kelimede hiç yok.</p>
     <p style="margin-top:12px"><b>Günün kelimesi:</b> 4, 5 ve 6 harf için her gün yeni birer kelime. Herkese aynı kelime düşer, sonucunu paylaşabilirsin.</p>
-    <p><b>Süreli:</b> 2 dakikada bulabildiğin kadar kelime bul.</p>
+    <p><b>Süreli:</b> 2 dakikada bulabildiğin kadar kelime bul. Takılırsan Pas de, 10 saniye kaybedersin.</p>
+    <p><b>Zor mod:</b> Ayarlardan açılır; bulduğun ipuçlarını her tahminde kullanmak zorundasın.</p>
     <p class="kucuk-yazi">Kelimeyi bulunca anlamını ve örnek bir cümle görürsün. Fikir ve tasarım: Winterdeveloper.</p>
   `, true, () => { if (!ayar.yardimGoruldu) { ayar.yardimGoruldu = true; ayarKaydet(); } });
+}
+
+// ---------- ayarlar ----------
+function zorDegisebilir() {
+  if (mod === "sureli") return !sureli;
+  return !oyun || oyun.bitti || oyun.tahminler.length === 0;
+}
+function ayarlarGoster() {
+  const satir = (ad, baslik, aciklama, acik, kilitli) => `
+    <div class="ayar">
+      <div><b>${baslik}</b><small>${aciklama}</small></div>
+      <button class="anahtar" role="switch" data-ayar="${ad}" aria-checked="${acik}" aria-label="${baslik}" ${kilitli ? "disabled" : ""}></button>
+    </div>`;
+  const zorKilit = !zorDegisebilir();
+  pencereAc(`
+    <h2>Ayarlar</h2>
+    ${satir("zor", "Zor mod", zorKilit
+      ? "Oyun sürerken değiştirilemez. Kelimeyi bitirince ya da yeni oyunda açıp kapatabilirsin."
+      : "Bulduğun ipuçlarını sonraki tahminlerde kullanmak zorundasın. Paylaşımda “Zor” yazar.", ayar.zor, zorKilit)}
+    ${satir("kontrast", "Yüksek kontrast", "Renk ayrımı zor olanlar için yeşil ve sarı renkler.", ayar.kontrast)}
+    ${satir("ses", "Ses efektleri", "Tuş, kart çevirme ve kazanma sesleri.", ayar.ses)}
+    <p class="kucuk-yazi" style="margin-top:12px">Sözlükte 13 binden fazla kelime var; tahmin olarak hepsi kabul edilir, sorulanlar ise anlamıyla birlikte seçilmiş kelimelerdir.</p>
+  `);
+  document.querySelectorAll(".anahtar").forEach(d => d.onclick = () => {
+    const ad = d.dataset.ayar;
+    if (ad === "zor" && !zorDegisebilir()) return;
+    ayar[ad] = !ayar[ad];
+    d.setAttribute("aria-checked", String(ayar[ad]));
+    if (ad === "zor") {
+      if (oyun && !oyun.bitti && oyun.tahminler.length === 0) oyun.zor = ayar.zor;
+      zorRozetiCiz();
+    }
+    if (ad === "kontrast") document.body.classList.toggle("kontrast", ayar.kontrast);
+    if (ad === "ses" && ayar.ses) SES.tus();
+    ayarKaydet();
+  });
+}
+function zorRozetiCiz() {
+  const h1 = document.querySelector("h1");
+  let r = h1.querySelector(".zor-rozet");
+  const goster = oyun ? oyun.zor : ayar.zor;
+  if (goster && !r) { r = document.createElement("small"); r.className = "zor-rozet"; r.textContent = "ZOR"; h1.appendChild(r); }
+  if (!goster && r) r.remove();
 }
 
 function istatistikHtml() {
@@ -460,10 +574,10 @@ function sonucGoster() {
 }
 
 function paylasMetni() {
-  const kare = { dogru: "🟦", var: "🟧", yok: "⬛" };
+  const kare = ayar.kontrast ? { dogru: "🟩", var: "🟨", yok: "⬛" } : { dogru: "🟦", var: "🟧", yok: "⬛" };
   const satirlar = oyun.tahminler.map(t => puanla(t, oyun.cevap.kelime).map(d => kare[d]).join(""));
   const skor = oyun.kazandi ? oyun.tahminler.length : "X";
-  return `Ayazle #${oyun.gun} · ${uzunluk} harf · ${skor}/${DENEME} ❄️\n\n${satirlar.join("\n")}\n\n${SITE}`;
+  return `Ayazle #${oyun.gun} · ${uzunluk} harf · ${skor}/${DENEME}${oyun.zor ? " · Zor" : ""} ❄️\n\n${satirlar.join("\n")}\n\n${SITE}`;
 }
 
 async function paylas(metin) {
@@ -541,6 +655,8 @@ $("kapat").onclick = pencereKapat;
 $("perde").addEventListener("click", e => { if (e.target === $("perde") && $("perde").dataset.kapatilabilir) pencereKapat(); });
 $("yardimDugme").onclick = yardimGoster;
 $("istatistikDugme").onclick = () => { if (!kilit) istatistikGoster(); };
+$("ayarDugme").onclick = () => { if (!kilit) ayarlarGoster(); };
+$("pasDugme").onclick = e => { pasGec(); e.currentTarget.blur(); };
 window.addEventListener("resize", () => { if (oyun) tumunuCiz(); });
 
 // ---------- kar ----------
@@ -593,6 +709,7 @@ function karKare(simdi) {
 requestAnimationFrame(karKare);
 
 // ---------- başlangıç ----------
+document.body.classList.toggle("kontrast", ayar.kontrast);
 klavyeKur();
 secimleriCiz();
 if (mod === "gunluk") gunlukBaslat(); else sureliHazirla();
@@ -603,4 +720,4 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
 }
 
 // Testler ve hata ayıklama için
-window.Ayazle = { puanla, bugunNo, gununKelimesi, durum: () => ({ mod, uzunluk, oyun, sureli: !!sureli }) };
+window.Ayazle = { puanla, zorKontrol, bugunNo, gununKelimesi, durum: () => ({ mod, uzunluk, oyun, sureli: !!sureli }) };

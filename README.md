@@ -44,7 +44,15 @@ Her tahmin gerçek bir kelime olmalı. Tahminden sonra kareler renk değiştirir
   🟦🟦🟦🟦🟦
   ```
 
-- **Süreli** — 2 dakikada bulabildiğin kadar kelime bul. Süre bitince bulduğun ve kaçırdığın bütün kelimeleri anlamlarıyla görürsün.
+- **Süreli** — 2 dakikada bulabildiğin kadar kelime bul. Takıldığın kelimeyi **Pas** ile geçebilirsin ama 10 saniye kaybedersin. Süre bitince bulduğun ve kaçırdığın bütün kelimeleri anlamlarıyla görürsün.
+
+## Ayarlar
+
+Sağ üstteki ⚙️ düğmesinden:
+
+- **Zor mod** — bulduğun ipuçlarını (yeri doğru harfler ve kelimede olan harfler) sonraki tahminlerde kullanmak zorundasın. Oyun başlamadan açılır; paylaşımda “Zor” yazar.
+- **Yüksek kontrast** — renk ayrımı zor olanlar için yeşil/sarı renkler (paylaşım kareleri de 🟩🟨 olur).
+- **Ses efektleri** — tuş, kart çevirme ve kazanma sesleri; dosya yok, sesler tarayıcıda üretilir.
 
 İstatistikler (oynanan, kazanma yüzdesi, seri, kaçıncı tahminde bulduğun) ve süreli mod rekorun her harf sayısı için ayrı tutulur.
 
@@ -60,6 +68,7 @@ Bütün kelimeler [`kelimeler.js`](kelimeler.js) dosyasında:
 
 - **Sorulan kelimeler** `kelime|anlamı|örnek cümle` biçiminde yazılır. Şu an 4 harfte 78, 5 harfte 117, 6 harfte 61 kelime var.
 - **Tahmin olarak kabul edilen ek kelimeler** boşlukla ayrılmış bir listede. Oyun "Bu kelime listede yok" derse, o kelimeyi buraya eklemen yeter.
+- **Geniş sözlük** [`sozluk.js`](sozluk.js) dosyasında: 4–6 harfli 13 binden fazla kelime tahmin olarak kabul edilir. [Vikisözlük sözcük listesinden](https://github.com/mertemin/turkish-word-list) (CC BY-SA 3.0) özel adlar ayıklanarak hazırlandı.
 
 Uzunluklar kendiliğinden ayrılır; yeni kelime eklemek için listenin sonuna yazman yeterli. Her yüklemeden sonra GitHub Actions yeni APK'yı derler ve siteyi günceller.
 

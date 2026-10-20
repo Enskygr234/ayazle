@@ -363,3 +363,10 @@ for (const kelime of EK_KELIMELER.split(/\s+/)) {
   const n = Array.from(kelime).length;
   if (GECERLI[n]) GECERLI[n].add(kelime);
 }
+// Geniş sözlük (sozluk.js) yüklüyse onu da tahmin olarak kabul et
+if (typeof SOZLUK === "string") {
+  for (const kelime of SOZLUK.split(" ")) {
+    const n = Array.from(kelime).length;
+    if (GECERLI[n]) GECERLI[n].add(kelime);
+  }
+}

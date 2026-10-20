@@ -27,7 +27,7 @@ jobs:
           npm init -y > /dev/null
           npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
           mkdir www
-          cp -r ../index.html ../style.css ../app.js ../kelimeler.js ../manifest.json ../icons www/
+          cp -r ../index.html ../style.css ../app.js ../sozluk.js ../kelimeler.js ../manifest.json ../icons www/
           npx cap init "Ayazle" com.enskygr234.ayazle --web-dir www
           node -e 'const f="capacitor.config.json";const c=JSON.parse(require("fs").readFileSync(f));c.android={backgroundColor:"#0b1626"};require("fs").writeFileSync(f,JSON.stringify(c,null,2))'
           npx cap add android
