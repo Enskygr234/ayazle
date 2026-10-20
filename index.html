@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ayazle — Türkçe kelime oyunu</title>
-<meta name="description" content="Her gün yeni bir kelime. 6 hakta bul, anlamını öğren, sonucunu paylaş.">
+<meta name="description" content="999 seviyeli Türkçe kelime oyunu. Gizli kelimeyi bul, seviye atla, her bölümde zorlaşsın.">
 <meta name="theme-color" content="#0b1626">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
@@ -29,15 +29,32 @@
 
   <nav class="secimler">
     <div class="sekmeler" role="tablist" aria-label="Oyun modu">
-      <button role="tab" data-mod="gunluk" aria-selected="true">Günün kelimesi</button>
+      <button role="tab" data-mod="seviye" aria-selected="true">Seviyeler</button>
+      <button role="tab" data-mod="gunluk" aria-selected="false">Günlük</button>
       <button role="tab" data-mod="sureli" aria-selected="false">Süreli</button>
     </div>
-    <div class="uzunluklar" role="radiogroup" aria-label="Harf sayısı">
+    <div class="uzunluklar" id="uzunluklar" role="radiogroup" aria-label="Harf sayısı">
       <button role="radio" data-uzunluk="4" aria-checked="false">4</button>
       <button role="radio" data-uzunluk="5" aria-checked="true">5</button>
       <button role="radio" data-uzunluk="6" aria-checked="false">6</button>
     </div>
   </nav>
+
+  <div class="seviye-bilgi" id="seviyeBilgi" hidden>
+    <div class="seviye-ust">
+      <button class="harita-dugme" id="haritaDugme" aria-label="Seviye haritası">
+        <span class="harita-simge" aria-hidden="true">🗺️</span>
+        <span><b id="seviyeNo">Seviye 1</b><small id="bolumAd">İlk Kar</small></span>
+      </button>
+      <span class="seviye-sure" id="seviyeSure" hidden>⏱ <b id="seviyeKalan">0:00</b></span>
+      <span class="kar-para" id="karPara" title="Kar tanesi">❄ <b id="karSayi">0</b></span>
+    </div>
+    <div class="sure-cubuk" id="seviyeCubukKap" hidden><i id="seviyeCubuk"></i></div>
+    <div class="ipuclari">
+      <button class="ipucu" id="ipucuHarf">💡 Harf aç <small>30 ❄</small></button>
+      <button class="ipucu" id="ipucuEle">🧹 3 harf ele <small>20 ❄</small></button>
+    </div>
+  </div>
 
   <div class="sureli-bilgi" id="sureliBilgi" hidden>
     <div class="sure-cubuk"><i id="sureCubuk"></i></div>

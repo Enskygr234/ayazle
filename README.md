@@ -20,7 +20,7 @@
 </div>
 <!-- /ENS:TANITIM -->
 
-**Ayazle**, buzlu bir kış havasında oynanan Türkçe kelime oyunu. Gizli kelimeyi 6 hakta bul; bulunca kar patlar, ardından kelimenin anlamı ve örnek bir cümle çıkar. Yani oynarken kelime de öğrenirsin.
+**Ayazle**, buzlu bir kış havasında oynanan, **999 seviyeli** Türkçe kelime oyunu. Gizli kelimeyi bul, seviye atla; her bölümde oyun biraz daha zorlaşır. Kelimeyi buluncakar patlar, ardından kelimenin anlamı ve örnek bir cümle çıkar. Yani oynarken kelime de öğrenirsin.
 
 ## Nasıl oynanır
 
@@ -33,6 +33,21 @@ Her tahmin gerçek bir kelime olmalı. Tahminden sonra kareler renk değiştirir
 | ⬛ Koyu | Harf kelimede yok |
 
 ## Modlar
+
+- **Seviyeler** — 999 seviye, 10 bölüm: İlk Kar, Kırağı, Ayaz, Tipi, Buzul, Çığ, Kutup Gecesi, Karakış, Zemheri ve Ayaz Ata. İlerledikçe:
+
+  | Seviye | Ne değişir |
+  |---|---|
+  | 1–40 | 4 harfli kelimeler, 6 hak |
+  | 42+ | 5 harfli kelimeler araya girer |
+  | 150+ | Süre sınırı: 4 dakikadan başlar, 999. seviyede 1 dakikaya iner |
+  | 301+ | 5 hak |
+  | 351+ | 6 harfli kelimeler |
+  | 400+ | Zor mod zorunlu |
+  | 651+ | 4 hak |
+  | 801+ | Hep 6 harf |
+
+  Az tahminde bulursan **3 yıldız** alırsın. Seviye geçince ve yeni yıldız kazanınca **kar tanesi (❄)** toplarsın; bununla **Harf aç** (30 ❄) ya da **3 harf ele** (20 ❄) ipuçlarını kullanabilirsin. Kaybedersen aynı seviye yeni bir kelimeyle tekrar gelir. Seviye haritasından geçtiğin seviyelere dönüp yıldızlarını artırabilirsin.
 
 - **Günün kelimesi** — 4, 5 ve 6 harf için her gün yeni birer kelime. Herkese aynı kelime düşer, gece yarısı (Türkiye saati) yenilenir. Sonucunu renkli karelerle paylaşabilirsin:
 

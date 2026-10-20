@@ -70,15 +70,19 @@ function puanla(tahmin, cevap) {
 }
 
 // ---------- durum ----------
-const ayar = Object.assign({ uzunluk: 5, mod: "gunluk", yardimGoruldu: false, zor: false, kontrast: false, ses: true }, oku("ayar", {}));
-let mod = ayar.mod === "sureli" ? "sureli" : "gunluk";
-let uzunluk = [4, 5, 6].includes(ayar.uzunluk) ? ayar.uzunluk : 5;
+const ayar = Object.assign({ uzunluk: 5, mod: "seviye", yardimGoruldu: false, zor: false, kontrast: false, ses: true }, oku("ayar", {}));
+// Seviyeler geldiğinde herkes bir kez seviye moduyla açsın
+if (!ayar.seviyeTanitildi) { ayar.mod = "seviye"; ayar.seviyeTanitildi = true; }
+let mod = ["seviye", "gunluk", "sureli"].includes(ayar.mod) ? ayar.mod : "seviye";
+if (![4, 5, 6].includes(ayar.uzunluk)) ayar.uzunluk = 5;
+let uzunluk = ayar.uzunluk;
 let oyun;            // { cevap, tahminler, yazilan, bitti, kazandi }
 let kilit = false;   // açılma animasyonu sürerken girişi durdur
 let sureli = null;   // { bitis, puan, bulunanlar, kacanlar, kullanilan, zamanlayici }
 
 function ayarKaydet() {
-  yaz("ayar", { uzunluk, mod, yardimGoruldu: ayar.yardimGoruldu, zor: ayar.zor, kontrast: ayar.kontrast, ses: ayar.ses });
+  if (mod !== "seviye") ayar.uzunluk = uzunluk;   // seviyede harf sayısını seviye belirler, tercihi bozmasın
+  yaz("ayar", { uzunluk: ayar.uzunluk, mod, yardimGoruldu: ayar.yardimGoruldu, zor: ayar.zor, kontrast: ayar.kontrast, ses: ayar.ses, seviyeTanitildi: true });
 }
 
 // ---------- ses ----------
@@ -107,6 +111,8 @@ const SES = {
   kayip: () => [392, 330, 262].forEach((f, i) => ton(f, i * 0.16, 0.3, "sine", 0.06)),
 };
 
+const hak = () => (oyun && oyun.hak) || DENEME;
+
 function istatistikOku(n) {
   return oku("istatistik-" + n, { oynanan: 0, kazanilan: 0, seri: 0, enSeri: 0, dagilim: [0, 0, 0, 0, 0, 0], sonGun: 0 });
 }
@@ -117,7 +123,7 @@ function tahtaKur() {
   tahta.innerHTML = "";
   const boy = Math.min(62, Math.floor((Math.min(window.innerWidth, 520) - 40) / uzunluk) - 6);
   tahta.style.setProperty("--kare", Math.max(40, boy) + "px");
-  for (let s = 0; s < DENEME; s++) {
+  for (let s = 0; s < hak(); s++) {
     const satir = document.createElement("div");
     satir.className = "satir";
     satir.style.gridTemplateColumns = `repeat(${uzunluk}, auto)`;
@@ -152,8 +158,9 @@ function satirCiz(s, harfler, sonuc, animasyon) {
   const kareler = $("tahta").children[s].children;
   for (let i = 0; i < uzunluk; i++) {
     const kare = kareler[i];
-    kare.textContent = harfler[i] ? buyuk(harfler[i]) : "";
-    kare.className = "kare" + (harfler[i] ? " dolu" : "");
+    const ipucu = !sonuc && !harfler[i] && oyun && oyun.ipucu && oyun.ipucu[i];
+    kare.textContent = harfler[i] ? buyuk(harfler[i]) : ipucu ? buyuk(ipucu) : "";
+    kare.className = "kare" + (harfler[i] ? " dolu" : ipucu ? " ipucu-harf" : "");
     if (sonuc) {
       kare.style.setProperty("--gecikme", animasyon ? i * 0.25 + "s" : "0s");
       if (!animasyon) kare.style.animation = "none";
@@ -172,6 +179,8 @@ function klavyeBoya() {
       if (!durum[h] || oncelik[sonuc[i]] > oncelik[durum[h]]) durum[h] = sonuc[i];
     });
   }
+  if (oyun.elenen) oyun.elenen.forEach(h => { if (!durum[h]) durum[h] = "yok"; });
+  if (oyun.ipucu) Object.values(oyun.ipucu).forEach(h => { durum[h] = "dogru"; });
   document.querySelectorAll(".tus").forEach(d => {
     d.classList.remove("dogru", "var", "yok");
     if (durum[d.dataset.tus]) d.classList.add(durum[d.dataset.tus]);
@@ -181,7 +190,7 @@ function klavyeBoya() {
 function tumunuCiz() {
   tahtaKur();
   oyun.tahminler.forEach((t, s) => satirCiz(s, Array.from(t), puanla(t, oyun.cevap.kelime), false));
-  if (!oyun.bitti && oyun.tahminler.length < DENEME) satirCiz(oyun.tahminler.length, oyun.yazilan, null);
+  if (!oyun.bitti && oyun.tahminler.length < hak()) satirCiz(oyun.tahminler.length, oyun.yazilan, null);
   klavyeBoya();
   zorRozetiCiz();
 }
@@ -216,6 +225,7 @@ function harfEkle(h) {
   if (kilit || oyun.bitti || oyun.yazilan.length >= uzunluk) return;
   oyun.yazilan.push(h);
   SES.tus();
+  if (mod === "seviye" && oyun.ayar.sure && !oyun.bitis) seviyeSaatBaslat();
   satirCiz(oyun.tahminler.length, oyun.yazilan, null);
 }
 
@@ -243,7 +253,7 @@ function gonder() {
   SES.cevir(sonuc);
 
   const kazandi = tahmin === oyun.cevap.kelime;
-  const bitti = kazandi || oyun.tahminler.length === DENEME;
+  const bitti = kazandi || oyun.tahminler.length === hak();
   if (bitti) { oyun.bitti = true; oyun.kazandi = kazandi; }
   if (mod === "gunluk") {
     gunlukKaydet();
@@ -256,7 +266,9 @@ function gonder() {
     klavyeBoya();
     kilit = false;
     if (!bitti) return;
-    if (mod === "gunluk") {
+    if (mod === "seviye") {
+      seviyeBitti(kazandi, s, "hak");
+    } else if (mod === "gunluk") {
       if (kazandi) { kutla(s); setTimeout(() => sonucGoster(true), 1300); }
       else { SES.kayip(); setTimeout(() => sonucGoster(true), 400); }
     } else {
@@ -311,6 +323,8 @@ function istatistikIsle(kazandi, deneme) {
     ist.enSeri = Math.max(ist.enSeri, ist.seri);
     ist.dagilim[deneme - 1]++;
     ist.sonKazanilanGun = oyun.gun;
+    karEkle(15);
+    setTimeout(() => bildir("Günün kelimesi: +15 ❄", 1800), 1500);
   } else {
     ist.seri = 0;
   }
@@ -431,6 +445,301 @@ function sureliBitir() {
   $("sureliPaylas").onclick = () => paylas(`Ayazle ⏱️ Süreli · ${uzunluk} harf\n2 dakikada ${s.puan} kelime buldum! ❄️\n\n${SITE}`);
 }
 
+// ---------- seviyeler ----------
+// 999 seviye, 10 bölüm. Seviye ilerledikçe kelime uzar, hak azalır, süre sınırı ve zor mod gelir.
+const SEVIYE_SAYISI = 999;
+const BOLUMLER = ["İlk Kar", "Kırağı", "Ayaz", "Tipi", "Buzul", "Çığ", "Kutup Gecesi", "Karakış", "Zemheri", "Ayaz Ata"];
+const IPUCU_HARF = 30, IPUCU_ELE = 20;
+
+function seviyeAyari(n) {
+  let uz;
+  if (n <= 40) uz = 4;
+  else if (n <= 120) uz = n % 3 === 0 ? 5 : 4;
+  else if (n <= 350) uz = n % 7 === 0 ? 4 : 5;
+  else if (n <= 600) uz = n % 3 === 0 ? 6 : 5;
+  else if (n <= 800) uz = n % 3 === 0 ? 5 : 6;
+  else uz = 6;
+  const hak = n <= 300 ? 6 : n <= 650 ? 5 : 4;
+  const sure = n < 150 ? 0 : Math.max(60, Math.round(240 - (n - 150) * 0.21));   // 4 dk'dan 1 dk'ya iner
+  return { n, uz, hak, sure, zor: n >= 400, bolum: Math.ceil(n / 100) };
+}
+
+// Bölümlerin ilk kez karşına çıkan zorlukları
+const YENILIKLER = {
+  42: "İlk <b>5 harfli</b> kelime! Artık arada bir daha uzun kelimeler gelecek.",
+  150: "<b>Süre sınırı</b> başlıyor. İlk harfi yazınca saat işler; ilerledikçe süre kısalır.",
+  301: "Bundan sonra kelime başına <b>5 hakkın</b> var.",
+  351: "<b>6 harfli</b> kelimeler geliyor.",
+  400: "<b>Zor mod</b> artık zorunlu: bulduğun ipuçlarını her tahminde kullanmalısın.",
+  651: "Son düzlük: kelime başına yalnızca <b>4 hak</b>.",
+  801: "Bundan sonra bütün kelimeler <b>6 harfli</b>. Ayaz Ata'ya az kaldı!",
+};
+
+// Sorulacak kelime havuzu: önce anlamıyla seçilmiş kış kelimeleri, sonra günlük dilden kelimeler
+const SEVIYE_HAVUZ = {};
+for (const n of [4, 5, 6]) {
+  const anlamli = karistir(CEVAPLAR[n], 999 + n);
+  const varolan = new Set(CEVAPLAR[n].map(c => c.kelime));
+  const diger = [...new Set(EK_KELIMELER.split(/\s+/))]
+    .filter(k => Array.from(k).length === n && !varolan.has(k) && Array.from(k).every(h => HARFLER.has(h)))
+    .map(kelime => ({ kelime }));
+  SEVIYE_HAVUZ[n] = anlamli.concat(karistir(diger, 4242 + n));
+}
+// Her seviyenin kendi uzunluğundaki sırası, kelimeler mümkün olduğunca tekrar etmesin
+const SEVIYE_SIRA = [0];
+{
+  const sayac = { 4: 0, 5: 0, 6: 0 };
+  for (let n = 1; n <= SEVIYE_SAYISI; n++) SEVIYE_SIRA[n] = sayac[seviyeAyari(n).uz]++;
+}
+function seviyeKelimesi(n, deneme) {
+  const havuz = SEVIYE_HAVUZ[seviyeAyari(n).uz];
+  return havuz[(SEVIYE_SIRA[n] + deneme * 101) % havuz.length];
+}
+
+const ilerleme = Object.assign({ acik: 1, simdiki: 1, yildiz: {}, kar: 60, deneme: {}, gorulen: [] }, oku("seviye", {}));
+function ilerlemeKaydet() { yaz("seviye", ilerleme); }
+function karEkle(miktar) {
+  ilerleme.kar = Math.max(0, ilerleme.kar + miktar);
+  ilerlemeKaydet();
+  const e = $("karSayi");
+  if (e) {
+    e.textContent = ilerleme.kar;
+    const kap = $("karPara");
+    kap.classList.remove("artti"); void kap.offsetWidth; if (miktar > 0) kap.classList.add("artti");
+  }
+  ipucuDugmeleriCiz();
+}
+
+function modBaslat() {
+  if (mod === "seviye") seviyeBaslat(ilerleme.simdiki);
+  else if (mod === "gunluk") gunlukBaslat();
+  else sureliHazirla();
+}
+
+function seviyeBaslat(n) {
+  n = Math.min(Math.max(1, n), ilerleme.acik, SEVIYE_SAYISI);
+  seviyeSaatDurdur();
+  const a = seviyeAyari(n);
+  ilerleme.simdiki = n;
+  ilerlemeKaydet();
+  uzunluk = a.uz;
+  const cevap = seviyeKelimesi(n, ilerleme.deneme[n] || 0);
+  oyun = { cevap, tahminler: [], yazilan: [], bitti: false, kazandi: false, seviye: n, ayar: a,
+           hak: a.hak, zor: a.zor || ayar.zor, zorZorunlu: a.zor, ipucu: {}, elenen: new Set(), ipucuKullandi: false, bitis: null };
+  seviyeBilgiCiz();
+  tumunuCiz();
+  if (YENILIKLER[n] && !ilerleme.gorulen.includes(n)) {
+    ilerleme.gorulen.push(n);
+    ilerlemeKaydet();
+    setTimeout(() => {
+      pencereAc(`
+        <h2>Seviye ${n} · Yeni zorluk</h2>
+        <p class="yeni-ozellik">${YENILIKLER[n]}</p>
+        <button class="buyuk-dugme" id="tamam" style="width:100%;margin-top:6px">Hazırım</button>
+      `);
+      $("tamam").onclick = pencereKapat;
+    }, 200);
+  }
+}
+
+function seviyeBilgiCiz() {
+  const a = oyun.ayar;
+  $("seviyeNo").textContent = "Seviye " + a.n;
+  $("bolumAd").textContent = `${BOLUMLER[a.bolum - 1]} · ${a.hak} hak${oyun.zor ? " · Zor" : ""}`;
+  $("seviyeSure").hidden = !a.sure;
+  $("seviyeCubukKap").hidden = !a.sure;
+  if (a.sure) {
+    $("seviyeKalan").textContent = sureYaz(a.sure);
+    $("seviyeSure").classList.remove("az");
+    $("seviyeCubuk").style.width = "100%";
+  }
+  $("karSayi").textContent = ilerleme.kar;
+  ipucuDugmeleriCiz();
+}
+const sureYaz = sn => Math.floor(sn / 60) + ":" + String(sn % 60).padStart(2, "0");
+
+function ipucuDugmeleriCiz() {
+  const kapali = !oyun || oyun.bitti || mod !== "seviye";
+  $("ipucuHarf").disabled = kapali || ilerleme.kar < IPUCU_HARF;
+  $("ipucuEle").disabled = kapali || ilerleme.kar < IPUCU_ELE;
+}
+
+// ---- saat ----
+let seviyeZamanlayici = null;
+function seviyeSaatBaslat() {
+  oyun.bitis = Date.now() + oyun.ayar.sure * 1000;
+  clearInterval(seviyeZamanlayici);
+  seviyeZamanlayici = setInterval(seviyeSaat, 250);
+}
+function seviyeSaatDurdur() { clearInterval(seviyeZamanlayici); seviyeZamanlayici = null; }
+function seviyeSaat() {
+  if (!oyun || !oyun.bitis || mod !== "seviye") return seviyeSaatDurdur();
+  const kalan = Math.max(0, oyun.bitis - Date.now());
+  const sn = Math.ceil(kalan / 1000);
+  $("seviyeKalan").textContent = sureYaz(sn);
+  $("seviyeSure").classList.toggle("az", sn <= 15);
+  $("seviyeCubuk").style.width = (kalan / (oyun.ayar.sure * 10)) + "%";
+  if (kalan <= 0 && !kilit && !oyun.bitti) { oyun.bitti = true; seviyeBitti(false, -1, "sure"); }
+}
+
+// ---- ipuçları ----
+function bilinenYerler() {
+  const yer = new Set(Object.keys(oyun.ipucu).map(Number));
+  for (const t of oyun.tahminler) puanla(t, oyun.cevap.kelime).forEach((d, i) => { if (d === "dogru") yer.add(i); });
+  return yer;
+}
+function ipucuHarfAc() {
+  if (mod !== "seviye" || kilit || oyun.bitti) return;
+  if (ilerleme.kar < IPUCU_HARF) { bildir("Yeterli kar tanen yok"); return; }
+  const c = Array.from(oyun.cevap.kelime), bilinen = bilinenYerler();
+  const bos = c.map((_, i) => i).filter(i => !bilinen.has(i));
+  if (bos.length <= 1) { bildir("Bu kelimede açılacak harf kalmadı"); return; }
+  const i = bos[Math.floor(Math.random() * bos.length)];
+  oyun.ipucu[i] = c[i];
+  oyun.ipucuKullandi = true;
+  karEkle(-IPUCU_HARF);
+  if (oyun.ayar.sure && !oyun.bitis) seviyeSaatBaslat();
+  satirCiz(oyun.tahminler.length, oyun.yazilan, null);
+  klavyeBoya();
+  ton(988, 0, 0.12, "sine", 0.05); ton(1319, 0.08, 0.16, "sine", 0.05);
+  bildir(`${i + 1}. harf ${buyuk(c[i])}`);
+}
+function ipucuHarfEle() {
+  if (mod !== "seviye" || kilit || oyun.bitti) return;
+  if (ilerleme.kar < IPUCU_ELE) { bildir("Yeterli kar tanen yok"); return; }
+  const cevapta = new Set(Array.from(oyun.cevap.kelime));
+  const denenen = new Set(oyun.tahminler.join(""));
+  const adaylar = [...HARFLER].filter(h => !cevapta.has(h) && !denenen.has(h) && !oyun.elenen.has(h));
+  if (!adaylar.length) { bildir("Elenecek harf kalmadı"); return; }
+  karistir(adaylar, Date.now()).slice(0, 3).forEach(h => oyun.elenen.add(h));
+  oyun.ipucuKullandi = true;
+  karEkle(-IPUCU_ELE);
+  if (oyun.ayar.sure && !oyun.bitis) seviyeSaatBaslat();
+  klavyeBoya();
+  ton(520, 0, 0.1, "triangle", 0.05); ton(390, 0.07, 0.12, "triangle", 0.05);
+  bildir("3 harf elendi");
+}
+
+// ---- seviye sonu ----
+function yildizHesapla() {
+  const h = oyun.hak, kullanilan = oyun.tahminler.length;
+  let y = kullanilan <= Math.floor(h / 2) ? 3 : kullanilan < h ? 2 : 1;
+  if (oyun.ipucuKullandi) y = Math.min(y, 2);
+  return y;
+}
+const yildizHtml = y => `<div class="yildizlar">${[1, 2, 3].map(i => `<i class="${i <= y ? "" : "bos"}">★</i>`).join("")}</div>`;
+const anlamHtml = c => c.anlam ? `<p class="anlam">${c.anlam}</p>${c.ornek ? `<p class="ornek-cumle">${c.ornek}</p>` : ""}` : "";
+
+function seviyeBitti(kazandi, s, neden) {
+  seviyeSaatDurdur();
+  oyun.bitti = true;
+  ipucuDugmeleriCiz();
+  const n = oyun.seviye, c = oyun.cevap;
+  if (kazandi) {
+    const y = yildizHesapla(), onceki = ilerleme.yildiz[n] || 0;
+    const odul = (onceki ? 0 : 10) + Math.max(0, y - onceki) * 5;
+    ilerleme.yildiz[n] = Math.max(y, onceki);
+    ilerleme.acik = Math.min(SEVIYE_SAYISI, Math.max(ilerleme.acik, n + 1));
+    ilerleme.simdiki = Math.min(SEVIYE_SAYISI, n + 1);
+    delete ilerleme.deneme[n];
+    ilerlemeKaydet();
+    kutla(s);
+    const son = n === SEVIYE_SAYISI;
+    const bolumBitti = n % 100 === 0 || son;
+    setTimeout(() => {
+      if (odul) karEkle(odul);
+      pencereAc(`
+        <h2>${son ? "Ayaz Ata oldun! 999 seviyenin hepsi bitti" : bolumBitti ? `${BOLUMLER[oyun.ayar.bolum - 1]} bölümü bitti!` : `Seviye ${n} tamam!`}</h2>
+        ${yildizHtml(y)}
+        ${odul ? `<div class="odul">+${odul} ❄</div>` : ""}
+        <div class="anlam-kelime">${buyuk(c.kelime)}</div>
+        ${anlamHtml(c)}
+        ${bolumBitti && !son ? `<p class="yeni-ozellik">Sıradaki bölüm: <b>${BOLUMLER[oyun.ayar.bolum]}</b></p>` : ""}
+        <div class="alt-satir">
+          <button class="buyuk-dugme ikincil" id="haritaAc">Harita</button>
+          <button class="buyuk-dugme" id="sonraki">${son ? "Tekrar oyna" : "Sonraki seviye"}</button>
+        </div>
+      `, true, () => seviyeBaslat(ilerleme.simdiki));
+      $("sonraki").onclick = pencereKapat;
+      $("haritaAc").onclick = () => { pencereKapaninca = null; haritaGoster(); };
+    }, 1300);
+  } else {
+    ilerleme.deneme[n] = (ilerleme.deneme[n] || 0) + 1;
+    ilerleme.simdiki = n;
+    ilerlemeKaydet();
+    SES.kayip();
+    if (neden === "sure") {
+      const satir = $("tahta").children[oyun.tahminler.length];
+      if (satir) salla(satir);
+    }
+    setTimeout(() => {
+      pencereAc(`
+        <h2>${neden === "sure" ? "Süre doldu!" : "Bu sefer olmadı"}</h2>
+        <div class="anlam-kelime kayip">${buyuk(c.kelime)}</div>
+        ${anlamHtml(c)}
+        <p class="kucuk-yazi">Tekrar denediğinde yeni bir kelime gelir.</p>
+        <div class="alt-satir">
+          <button class="buyuk-dugme ikincil" id="haritaAc">Harita</button>
+          <button class="buyuk-dugme" id="sonraki">Tekrar dene</button>
+        </div>
+      `, true, () => seviyeBaslat(ilerleme.simdiki));
+      $("sonraki").onclick = pencereKapat;
+      $("haritaAc").onclick = () => { pencereKapaninca = null; haritaGoster(); };
+    }, 500);
+  }
+}
+
+// ---- harita ----
+function haritaGoster(bolum) {
+  bolum = bolum || Math.ceil(ilerleme.simdiki / 100);
+  const bas = (bolum - 1) * 100 + 1, son = Math.min(bolum * 100, SEVIYE_SAYISI);
+  const toplamYildiz = Object.values(ilerleme.yildiz).reduce((a, b) => a + b, 0);
+  const bolumYildiz = Object.entries(ilerleme.yildiz).filter(([k]) => k >= bas && k <= son).reduce((a, [, v]) => a + v, 0);
+  let izgara = "";
+  for (let n = bas; n <= son; n++) {
+    const y = ilerleme.yildiz[n] || 0, acik = n <= ilerleme.acik;
+    const sinif = n === ilerleme.acik ? "simdiki" : y ? "gecildi" : "";
+    izgara += `<button data-seviye="${n}" class="${sinif}" ${acik ? "" : "disabled"} aria-label="Seviye ${n}${y ? ", " + y + " yıldız" : ""}">${n}${y ? `<small>${"★".repeat(y)}</small>` : ""}</button>`;
+  }
+  pencereAc(`
+    <h2>Seviye haritası</h2>
+    <p class="kucuk-yazi">Geçilen: <b>${ilerleme.acik - 1 + (ilerleme.yildiz[SEVIYE_SAYISI] ? 1 : 0)}</b> / ${SEVIYE_SAYISI} · Yıldız: <b>${toplamYildiz}</b> · ❄ <b>${ilerleme.kar}</b></p>
+    <div class="bolum-sekme" role="tablist">${BOLUMLER.map((ad, i) =>
+      `<button role="tab" data-bolum="${i + 1}" aria-selected="${i + 1 === bolum}" ${i * 100 + 1 > ilerleme.acik ? "disabled" : ""}>${i + 1}</button>`).join("")}</div>
+    <div class="bolum-baslik"><b>Bölüm ${bolum} · ${BOLUMLER[bolum - 1]}</b><small>★ ${bolumYildiz} / ${(son - bas + 1) * 3}</small></div>
+    <div class="seviye-izgara">${izgara}</div>
+  `, true, () => { if (mod === "seviye" && oyun && oyun.bitti) seviyeBaslat(ilerleme.simdiki); });
+  document.querySelectorAll("[data-bolum]").forEach(d => d.onclick = () => {
+    const f = pencereKapaninca; haritaGoster(+d.dataset.bolum); pencereKapaninca = f;
+  });
+  document.querySelectorAll("[data-seviye]").forEach(d => d.onclick = () => {
+    pencereKapaninca = null;
+    pencereKapat();
+    if (mod !== "seviye") { mod = "seviye"; sureliDurdur(); secimleriCiz(); ayarKaydet(); }
+    seviyeBaslat(+d.dataset.seviye);
+  });
+  const simdiki = document.querySelector(".seviye-izgara .simdiki");
+  if (simdiki) simdiki.scrollIntoView({ block: "nearest" });
+}
+
+function seviyeIstatistik() {
+  const toplamYildiz = Object.values(ilerleme.yildiz).reduce((a, b) => a + b, 0);
+  const ucYildiz = Object.values(ilerleme.yildiz).filter(y => y === 3).length;
+  pencereAc(`
+    <h2>İlerleme</h2>
+    <div class="istatistik">
+      <div><b>${Object.keys(ilerleme.yildiz).length}</b><small>Geçilen seviye</small></div>
+      <div><b>${toplamYildiz}</b><small>Yıldız</small></div>
+      <div><b>${ucYildiz}</b><small>3 yıldızlı</small></div>
+      <div><b>${ilerleme.kar}</b><small>Kar tanesi</small></div>
+    </div>
+    <p class="kucuk-yazi">Şu an <b>${BOLUMLER[Math.ceil(ilerleme.acik / 100) - 1]}</b> bölümündesin. Seviye geçince 10 ❄, her yeni yıldız için 5 ❄, günün kelimesini bulunca 15 ❄ kazanırsın.</p>
+    <p class="kucuk-yazi">Harf aç ipucu ${IPUCU_HARF} ❄, 3 harf ele ${IPUCU_ELE} ❄. İpucu kullandığın seviyeden en fazla 2 yıldız alırsın.</p>
+    <button class="buyuk-dugme" id="haritaAc" style="width:100%">Haritayı aç</button>
+  `);
+  $("haritaAc").onclick = () => haritaGoster();
+}
+
 // ---------- pencereler ----------
 let pencereKapaninca = null;
 function pencereAc(html, kapatilabilir = true, kapaninca = null) {
@@ -459,7 +768,8 @@ function yardimGoster() {
     <p class="kucuk-yazi"><b>N</b> kelimede var ama yeri yanlış.</p>
     ${ornek("boran", 3, "yok")}
     <p class="kucuk-yazi"><b>A</b> kelimede hiç yok.</p>
-    <p style="margin-top:12px"><b>Günün kelimesi:</b> 4, 5 ve 6 harf için her gün yeni birer kelime. Herkese aynı kelime düşer, sonucunu paylaşabilirsin.</p>
+    <p style="margin-top:12px"><b>Seviyeler:</b> 999 seviye, 10 bölüm. İlerledikçe kelimeler uzar, hakların azalır, süre sınırı ve zor mod gelir. Az tahminde bulursan 3 yıldız alırsın; kazandığın kar tanesiyle ipucu açabilirsin.</p>
+    <p><b>Günün kelimesi:</b> 4, 5 ve 6 harf için her gün yeni birer kelime. Herkese aynı kelime düşer, sonucunu paylaşabilirsin.</p>
     <p><b>Süreli:</b> 2 dakikada bulabildiğin kadar kelime bul. Takılırsan Pas de, 10 saniye kaybedersin.</p>
     <p><b>Zor mod:</b> Ayarlardan açılır; bulduğun ipuçlarını her tahminde kullanmak zorundasın.</p>
     <p class="kucuk-yazi">Kelimeyi bulunca anlamını ve örnek bir cümle görürsün. Fikir ve tasarım: Winterdeveloper.</p>
@@ -469,6 +779,7 @@ function yardimGoster() {
 // ---------- ayarlar ----------
 function zorDegisebilir() {
   if (mod === "sureli") return !sureli;
+  if (mod === "seviye" && oyun && oyun.zorZorunlu) return true;
   return !oyun || oyun.bitti || oyun.tahminler.length === 0;
 }
 function ayarlarGoster() {
@@ -493,7 +804,7 @@ function ayarlarGoster() {
     ayar[ad] = !ayar[ad];
     d.setAttribute("aria-checked", String(ayar[ad]));
     if (ad === "zor") {
-      if (oyun && !oyun.bitti && oyun.tahminler.length === 0) oyun.zor = ayar.zor;
+      if (oyun && !oyun.bitti && oyun.tahminler.length === 0) oyun.zor = ayar.zor || !!oyun.zorZorunlu;
       zorRozetiCiz();
     }
     if (ad === "kontrast") document.body.classList.toggle("kontrast", ayar.kontrast);
@@ -603,25 +914,30 @@ function secimleriCiz() {
   document.querySelectorAll("[data-mod]").forEach(d => d.setAttribute("aria-selected", String(d.dataset.mod === mod)));
   document.querySelectorAll("[data-uzunluk]").forEach(d => d.setAttribute("aria-checked", String(+d.dataset.uzunluk === uzunluk)));
   $("sureliBilgi").hidden = mod !== "sureli";
+  $("seviyeBilgi").hidden = mod !== "seviye";
+  $("uzunluklar").hidden = mod === "seviye";
 }
 
 function yenidenBaslat() {
   sureliDurdur();
+  seviyeSaatDurdur();
   if (!$("perde").hidden) { pencereKapaninca = null; $("perde").hidden = true; }
   oyun = null;
+  if (mod !== "seviye") uzunluk = ayar.uzunluk;
   secimleriCiz();
   ayarKaydet();
-  if (mod === "gunluk") gunlukBaslat(); else sureliHazirla();
+  modBaslat();
 }
 
 document.querySelectorAll("[data-mod]").forEach(d => d.addEventListener("click", () => {
   if (d.dataset.mod === mod || kilit) return;
+  if (mod === "seviye" && oyun && oyun.tahminler.length && !oyun.bitti && oyun.bitis && !confirm("Süreli seviye yarıda kalacak. Emin misin?")) return;
   if (sureli && !confirm("Süreli oyun bitecek. Emin misin?")) return;
   mod = d.dataset.mod;
   yenidenBaslat();
 }));
 document.querySelectorAll("[data-uzunluk]").forEach(d => d.addEventListener("click", () => {
-  if (+d.dataset.uzunluk === uzunluk || kilit) return;
+  if (mod === "seviye" || +d.dataset.uzunluk === uzunluk || kilit) return;
   if (sureli && !confirm("Süreli oyun bitecek. Emin misin?")) return;
   uzunluk = +d.dataset.uzunluk;
   yenidenBaslat();
@@ -654,7 +970,10 @@ document.addEventListener("keydown", e => {
 $("kapat").onclick = pencereKapat;
 $("perde").addEventListener("click", e => { if (e.target === $("perde") && $("perde").dataset.kapatilabilir) pencereKapat(); });
 $("yardimDugme").onclick = yardimGoster;
-$("istatistikDugme").onclick = () => { if (!kilit) istatistikGoster(); };
+$("istatistikDugme").onclick = () => { if (!kilit) (mod === "seviye" ? seviyeIstatistik() : istatistikGoster()); };
+$("haritaDugme").onclick = () => { if (!kilit) haritaGoster(); };
+$("ipucuHarf").onclick = e => { ipucuHarfAc(); e.currentTarget.blur(); };
+$("ipucuEle").onclick = e => { ipucuHarfEle(); e.currentTarget.blur(); };
 $("ayarDugme").onclick = () => { if (!kilit) ayarlarGoster(); };
 $("pasDugme").onclick = e => { pasGec(); e.currentTarget.blur(); };
 window.addEventListener("resize", () => { if (oyun) tumunuCiz(); });
@@ -712,8 +1031,8 @@ requestAnimationFrame(karKare);
 document.body.classList.toggle("kontrast", ayar.kontrast);
 klavyeKur();
 secimleriCiz();
-if (mod === "gunluk") gunlukBaslat(); else sureliHazirla();
-if (!ayar.yardimGoruldu && mod === "gunluk" && !oyun.bitti) yardimGoster();
+modBaslat();
+if (!ayar.yardimGoruldu && mod !== "sureli" && !oyun.bitti) yardimGoster();
 
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(() => {});
